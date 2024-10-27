@@ -20,7 +20,9 @@ function generateLabelCombinations(chars) {
 // 現在の画面内に表示されているリンクと入力欄を取得
 function getVisibleElements() {
   const clickable = Array.from(
-    document.querySelectorAll("a, input, textarea, summary"),
+    document.querySelectorAll(
+      "a, input, textarea, summary, button, [role='button']",
+    ),
   );
   return clickable.filter((element) => {
     const rect = element.getBoundingClientRect();
