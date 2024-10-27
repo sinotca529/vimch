@@ -43,17 +43,19 @@ let isLabelActive = false;
 function createLinkLabels(useNewTab) {
   isLabelActive = true;
   const labelFrag = document.createDocumentFragment();
-  const labels = getVisibleElements().map((element, index) => {
-    const keyBind = labelCombinations[index];
-    const rect = element.getBoundingClientRect();
-    const label = document.createElement("div");
-    label.textContent = keyBind.toUpperCase();
-    label.className = "vimch-label";
-    label.style.left = `${window.scrollX + rect.left}px`;
-    label.style.top = `${window.scrollY + rect.top}px`;
-    labelFrag.appendChild(label);
-    return { element, label, keyBind };
-  });
+  const labels = getVisibleElements()
+    .slice(0, labelCombinations.length)
+    .map((element, index) => {
+      const keyBind = labelCombinations[index];
+      const rect = element.getBoundingClientRect();
+      const label = document.createElement("div");
+      label.textContent = keyBind.toUpperCase();
+      label.className = "vimch-label";
+      label.style.left = `${window.scrollX + rect.left}px`;
+      label.style.top = `${window.scrollY + rect.top}px`;
+      labelFrag.appendChild(label);
+      return { element, label, keyBind };
+    });
   document.body.appendChild(labelFrag);
 
   let currentInput = "";
@@ -118,8 +120,8 @@ document.addEventListener(
     if (event.ctrlKey) return;
 
     const tagName = document.activeElement.tagName;
-    if (tagName === 'INPUT' || tagName === 'TEXTAREA') {
-      if (event.key === 'Escape') {
+    if (tagName === "INPUT" || tagName === "TEXTAREA") {
+      if (event.key === "Escape") {
         document.activeElement.blur();
         event.preventDefault();
         event.stopImmediatePropagation();
