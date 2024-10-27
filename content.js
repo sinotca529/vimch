@@ -116,8 +116,16 @@ document.addEventListener(
   "keydown",
   (event) => {
     if (event.ctrlKey) return;
-    if (document.activeElement.tagName === "INPUT") return;
-    if (document.activeElement.tagName === "TEXTAREA") return;
+
+    const tagName = document.activeElement.tagName;
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA') {
+      if (event.key === 'Escape') {
+        document.activeElement.blur();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+      return;
+    }
 
     const isInsertMode = insertModeBox.style.display == "block";
     if (isInsertMode) {
