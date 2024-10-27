@@ -168,7 +168,7 @@ document.addEventListener("keydown", (event) => {
       window.scrollBy({ top: -window.innerHeight / 2, behavior: "smooth" });
       break;
     case "G":
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
       break;
     case "g":
       if (keySequence === "gg") window.scrollTo({ top: 0, behavior: "smooth" });
