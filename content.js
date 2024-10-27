@@ -59,6 +59,7 @@ function createLinkLabels(useNewTab) {
   let currentInput = "";
   function handleKeyInput(event) {
     event.preventDefault();
+    event.stopImmediatePropagation();
 
     currentInput += event.key;
     const match = labels.find(({ keyBind }) => keyBind === currentInput);
@@ -90,21 +91,38 @@ function createLinkLabels(useNewTab) {
 }
 
 //-------------------------------------------------------------------
+// インサートモード
+//-------------------------------------------------------------------
+
+const insertModeBox = document.createElement("div");
+insertModeBox.textContent = "Insert Mode";
+insertModeBox.className = "vimch-insert";
+document.body.appendChild(insertModeBox);
+
+//-------------------------------------------------------------------
 // キーバインディング
 //-------------------------------------------------------------------
 
 let keySequence = "";
 document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey) return;
   if (document.activeElement.tagName === "INPUT") return;
   if (document.activeElement.tagName === "TEXTAREA") return;
-  if (event.ctrlKey) return;
+
+  const isInsertMode = insertModeBox.style.display == 'block';
+  if (isInsertMode) {
+    if (event.key === "Escape") insertModeBox.style.display = 'none';
+    return;
+  }
+
   if (isLabelActive) return;
 
-  keySequence = keySequence.slice(-1) + event.key;
+  event.preventDefault();
+  event.stopImmediatePropagation();
 
   const scrollSpeed = 50;
+  keySequence = keySequence.slice(-1) + event.key;
 
-  let callDefault = false;
   switch (event.key) {
     // --------------------------------------------------------------
     // タブ操作
@@ -156,15 +174,13 @@ document.addEventListener("keydown", (event) => {
       if (keySequence === "gg") window.scrollTo({ top: 0, behavior: "smooth" });
       break;
     // --------------------------------------------------------------
-    // デフォルト
+    // インサートモード
     // --------------------------------------------------------------
-    default:
-      callDefault = true;
+    case "i":
+      insertModeBox.style.display = 'block';
       break;
   }
-
-  if (!callDefault) event.preventDefault();
-});
+}, true);
 
 //-------------------------------------------------------------------
 // スタイル
@@ -182,6 +198,18 @@ style.textContent = `
     color: black;
     padding: 2px;
     z-index: 2147483647;
+  }
+  .vimch-insert {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 8px 16px;
+    background-color: white;
+    color: black;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    display: none;
   }
 `;
 document.head.appendChild(style);
