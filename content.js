@@ -63,17 +63,23 @@ function createLinkLabels(useNewTab) {
     event.preventDefault();
     event.stopImmediatePropagation();
 
+    if (event.key === "Escape") {
+      resetLinkLabels();
+      return;
+    }
+
     currentInput += event.key;
-    const match = labels.find(({ keyBind }) => keyBind === currentInput);
-    if (match) {
-      const tagName = match.element.tagName;
+    const found = labels.find(({ keyBind }) => keyBind === currentInput);
+
+    if (found) {
+      const tagName = found.element.tagName;
       if (tagName === "INPUT" || tagName === "TEXTAREA") {
-        match.element.focus();
+        found.element.focus();
         // カーソルを末尾に移動
-        const length = match.element.value.length;
-        match.element.setSelectionRange(length, length);
+        const length = found.element.value.length;
+        found.element.setSelectionRange(length, length);
       } else {
-        match.element.dispatchEvent(
+        found.element.dispatchEvent(
           new MouseEvent("click", {
             bubbles: true,
             cancelable: true,
@@ -82,11 +88,7 @@ function createLinkLabels(useNewTab) {
         );
       }
       resetLinkLabels();
-    } else if (
-      !labels.some(({ keyBind }) => keyBind.startsWith(currentInput))
-    ) {
-      resetLinkLabels();
-    } else if (event.key === "Escape") {
+    } else if (!labels.some(({ keyBind }) => keyBind.startsWith(currentInput))) {
       resetLinkLabels();
     }
   }
