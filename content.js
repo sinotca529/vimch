@@ -2,12 +2,9 @@
 // リンク
 //-------------------------------------------------------------------
 
-const labelChars = "abcdeghijklmnopqrstuvwxyz";
-const labelCombinations = generateLabelCombinations(labelChars);
-let isLabelActive = false;
-
 // ラベルの組み合わせを生成
-function generateLabelCombinations(chars) {
+function generateLabelCombinations() {
+  const chars = "abcdeghijklmnopqrstuvwxyz";
   const combinations = [];
   for (let i = 0; i < chars.length; i++) {
     for (let j = 0; j < chars.length; j++) {
@@ -41,6 +38,8 @@ function getVisibleElements() {
 }
 
 // ラベルを作成してリンクと入力欄に表示
+const labelCombinations = generateLabelCombinations();
+let isLabelActive = false;
 function createLinkLabels(useNewTab) {
   isLabelActive = true;
   const labelFrag = document.createDocumentFragment();
