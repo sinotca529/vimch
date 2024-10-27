@@ -44,7 +44,8 @@ function createLinkLabels() {
 
     const label = document.createElement("div");
     label.textContent = labelText;
-    label.style.fontSize = "12px";
+    label.style.fontFamily = '"Source Code Pro", Consolas, "Ubuntu Mono", Menlo, "DejaVu Sans Mono", monospace, monospace;'
+    label.style.fontSize = "16px";
     label.style.borderRadius = "3px";
     label.style.fontWeight = "bold";
     label.style.position = "absolute";
