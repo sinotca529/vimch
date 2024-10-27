@@ -18,7 +18,7 @@ function generateLabelCombinations() {
 function getVisibleElements() {
   const clickable = Array.from(
     document.querySelectorAll(
-      "a, input, textarea, summary, button, [role='button']",
+      "a, input, textarea, summary, button, [role='button'], [contenteditable=true]",
     ),
   );
   return clickable.filter((element) => {
@@ -72,14 +72,23 @@ function createLinkLabels(useNewTab) {
     const found = labels.find(({ keyBind }) => keyBind === currentInput);
 
     if (found) {
-      const tagName = found.element.tagName;
-      if (tagName === "INPUT" || tagName === "TEXTAREA") {
-        found.element.focus();
+      const elem = found.element;
+      if (elem.tagName === "INPUT" || elem.tagName === "TEXTAREA") {
+        elem.focus();
         // カーソルを末尾に移動
-        const length = found.element.value.length;
-        found.element.setSelectionRange(length, length);
+        const length = elem.value.length;
+        elem.setSelectionRange(length, length);
+      } else if (elem.contentEditable === "true") {
+        elem.focus();
+        // カーソルを末尾に移動
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.selectNodeContents(elem);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
       } else {
-        found.element.dispatchEvent(
+        elem.dispatchEvent(
           new MouseEvent("click", {
             bubbles: true,
             cancelable: true,
@@ -88,7 +97,9 @@ function createLinkLabels(useNewTab) {
         );
       }
       resetLinkLabels();
-    } else if (!labels.some(({ keyBind }) => keyBind.startsWith(currentInput))) {
+    } else if (
+      !labels.some(({ keyBind }) => keyBind.startsWith(currentInput))
+    ) {
       resetLinkLabels();
     }
   }
@@ -121,10 +132,14 @@ document.addEventListener(
   (event) => {
     if (event.ctrlKey) return;
 
-    const tagName = document.activeElement.tagName;
-    if (tagName === "INPUT" || tagName === "TEXTAREA") {
+    const activeElem = document.activeElement;
+    if (
+      activeElem.tagName === "INPUT" ||
+      activeElem.tagName === "TEXTAREA" ||
+      activeElem.contentEditable === "true"
+    ) {
       if (event.key === "Escape") {
-        document.activeElement.blur();
+        activeElem.blur();
         event.preventDefault();
         event.stopImmediatePropagation();
       }
