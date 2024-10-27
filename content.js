@@ -37,37 +37,26 @@ function getVisibleElements() {
 // ラベルを作成してリンクと入力欄に表示
 function createLinkLabels() {
   isLabelActive = true;
-  const elements = getVisibleElements();
-  const linkLabels = elements.map((element, index) => {
+  const labelFrag = document.createDocumentFragment();
+  const labels = getVisibleElements().map((element, index) => {
     const labelText = labelCombinations[index];
     const rect = element.getBoundingClientRect();
-
     const label = document.createElement("div");
     label.textContent = labelText;
-    label.style.fontFamily = '"Source Code Pro", Consolas, "Ubuntu Mono", Menlo, "DejaVu Sans Mono", monospace, monospace;'
-    label.style.fontSize = "16px";
-    label.style.borderRadius = "3px";
-    label.style.fontWeight = "bold";
-    label.style.position = "absolute";
+    label.className = "vimch-label";
     label.style.left = `${window.scrollX + rect.left}px`;
     label.style.top = `${window.scrollY + rect.top}px`;
-    label.style.backgroundColor = "yellow";
-    label.style.color = "black";
-    label.style.padding = "2px";
-    label.style.zIndex = 1000;
-
-    document.body.appendChild(label);
+    labelFrag.appendChild(label);
     return { element, label, labelText };
   });
-
-  console.log(elements.length);
+  document.body.appendChild(labelFrag);
 
   let currentInput = "";
   function handleKeyInput(event) {
     event.preventDefault();
 
     currentInput += event.key;
-    const match = linkLabels.find(({ labelText }) => labelText === currentInput);
+    const match = labels.find(({ labelText }) => labelText === currentInput);
     if (match) {
       if (match.element.tagName === "A") {
         window.location.href = match.element.href;
@@ -75,7 +64,9 @@ function createLinkLabels() {
         match.element.focus();
       }
       resetLinkLabels();
-    } else if (!labelCombinations.slice(0, elements.length).some((label) =>  label.startsWith(currentInput))) {
+    } else if (
+      !labels.some(({ labelText }) => labelText.startsWith(currentInput))
+    ) {
       resetLinkLabels();
     } else if (event.key === "Escape") {
       resetLinkLabels();
@@ -85,7 +76,7 @@ function createLinkLabels() {
   document.addEventListener("keydown", handleKeyInput);
 
   function resetLinkLabels() {
-    linkLabels.forEach(({ label }) => label.remove());
+    labels.forEach(({ label }) => label.remove());
     document.removeEventListener("keydown", handleKeyInput);
     isLabelActive = false;
   }
@@ -99,6 +90,7 @@ let keySequence = "";
 document.addEventListener("keydown", (event) => {
   if (document.activeElement.tagName === "INPUT") return;
   if (document.activeElement.tagName === "TEXTAREA") return;
+  if (event.ctrlKey) return;
   if (isLabelActive) return;
 
   keySequence = keySequence.slice(-1) + event.key;
@@ -132,22 +124,30 @@ document.addEventListener("keydown", (event) => {
     // スクロール
     // --------------------------------------------------------------
     case "h":
-      window.scrollBy({left: -scrollSpeed, behavior: "smooth"});
+      window.scrollBy({ left: -scrollSpeed, behavior: "smooth" });
       break;
     case "j":
-      window.scrollBy({top: scrollSpeed, behavior: "smooth"});
+      window.scrollBy({ top: scrollSpeed, behavior: "smooth" });
       break;
     case "k":
-      window.scrollBy({top: -scrollSpeed, behavior: "smooth"});
+      window.scrollBy({ top: -scrollSpeed, behavior: "smooth" });
       break;
     case "l":
-      window.scrollBy({left: scrollSpeed, behavior: "smooth"});
+      window.scrollBy({ left: scrollSpeed, behavior: "smooth" });
       break;
     case "d":
-      window.scrollBy({top: window.innerHeight / 2, left: 0, behavior: "smooth"});
+      window.scrollBy({
+        top: window.innerHeight / 2,
+        left: 0,
+        behavior: "smooth",
+      });
       break;
     case "u":
-      window.scrollBy({top: -window.innerHeight / 2, left: 0, behavior: "smooth"});
+      window.scrollBy({
+        top: -window.innerHeight / 2,
+        left: 0,
+        behavior: "smooth",
+      });
       break;
     case "G":
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
@@ -165,3 +165,24 @@ document.addEventListener("keydown", (event) => {
 
   if (!callDefault) event.preventDefault();
 });
+
+//-------------------------------------------------------------------
+// スタイル
+//-------------------------------------------------------------------
+
+const style = document.createElement("style");
+style.textContent = `
+  .vimch-label {
+    font-family: "Source Code Pro", Consolas, "Ubuntu Mono", Menlo, "DejaVu Sans Mono", monospace, monospace;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 3px;
+    font-weight: bold;
+    position: absolute;
+    background-color: yellow;
+    color: black;
+    padding: 2px;
+    z-index: 1000;
+  }
+`;
+document.head.appendChild(style);
