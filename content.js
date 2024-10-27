@@ -1,8 +1,8 @@
 //-------------------------------------------------------------------
 // リンク
 //-------------------------------------------------------------------
-const labelChars = "abcdeghijklmnopqrstuvwxyz";
 
+const labelChars = "abcdeghijklmnopqrstuvwxyz";
 const labelCombinations = generateLabelCombinations(labelChars);
 let isLabelActive = false;
 
@@ -43,15 +43,15 @@ function createLinkLabels(useNewTab) {
   isLabelActive = true;
   const labelFrag = document.createDocumentFragment();
   const labels = getVisibleElements().map((element, index) => {
-    const labelText = labelCombinations[index];
+    const keyBind = labelCombinations[index];
     const rect = element.getBoundingClientRect();
     const label = document.createElement("div");
-    label.textContent = labelText;
+    label.textContent = keyBind.toUpperCase();
     label.className = "vimch-label";
     label.style.left = `${window.scrollX + rect.left}px`;
     label.style.top = `${window.scrollY + rect.top}px`;
     labelFrag.appendChild(label);
-    return { element, label, labelText };
+    return { element, label, keyBind };
   });
   document.body.appendChild(labelFrag);
 
@@ -60,7 +60,7 @@ function createLinkLabels(useNewTab) {
     event.preventDefault();
 
     currentInput += event.key;
-    const match = labels.find(({ labelText }) => labelText === currentInput);
+    const match = labels.find(({ keyBind }) => keyBind === currentInput);
     if (match) {
       match.element.dispatchEvent(
         new MouseEvent("click", {
@@ -71,7 +71,7 @@ function createLinkLabels(useNewTab) {
       );
       resetLinkLabels();
     } else if (
-      !labels.some(({ labelText }) => labelText.startsWith(currentInput))
+      !labels.some(({ keyBind }) => keyBind.startsWith(currentInput))
     ) {
       resetLinkLabels();
     } else if (event.key === "Escape") {
@@ -143,18 +143,10 @@ document.addEventListener("keydown", (event) => {
       window.scrollBy({ left: scrollSpeed, behavior: "smooth" });
       break;
     case "d":
-      window.scrollBy({
-        top: window.innerHeight / 2,
-        left: 0,
-        behavior: "smooth",
-      });
+      window.scrollBy({ top: window.innerHeight / 2, behavior: "smooth" });
       break;
     case "u":
-      window.scrollBy({
-        top: -window.innerHeight / 2,
-        left: 0,
-        behavior: "smooth",
-      });
+      window.scrollBy({ top: -window.innerHeight / 2, behavior: "smooth" });
       break;
     case "G":
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
@@ -184,7 +176,6 @@ style.textContent = `
     font-size: 16px;
     font-weight: bold;
     border-radius: 3px;
-    font-weight: bold;
     position: absolute;
     background-color: yellow;
     color: black;
