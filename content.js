@@ -14,7 +14,7 @@ function generateLabelCombinations() {
   return combinations;
 }
 
-// 現在の画面内に表示されているリンクと入力欄を取得
+// 現在表示されているクリックできそうな要素を取得
 function getVisibleElements() {
   const clickable = Array.from(
     document.querySelectorAll(
@@ -64,13 +64,21 @@ function createLinkLabels(useNewTab) {
     currentInput += event.key;
     const match = labels.find(({ keyBind }) => keyBind === currentInput);
     if (match) {
-      match.element.dispatchEvent(
-        new MouseEvent("click", {
-          bubbles: true,
-          cancelable: true,
-          ctrlKey: useNewTab,
-        }),
-      );
+      const tagName = match.element.tagName;
+      if (tagName === "INPUT" || tagName === "TEXTAREA") {
+        match.element.focus();
+        // カーソルを末尾に移動
+        const length = match.element.value.length;
+        match.element.setSelectionRange(length, length);
+      } else {
+        match.element.dispatchEvent(
+          new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            ctrlKey: useNewTab,
+          }),
+        );
+      }
       resetLinkLabels();
     } else if (
       !labels.some(({ keyBind }) => keyBind.startsWith(currentInput))
@@ -104,83 +112,91 @@ document.body.appendChild(insertModeBox);
 //-------------------------------------------------------------------
 
 let keySequence = "";
-document.addEventListener("keydown", (event) => {
-  if (event.ctrlKey) return;
-  if (document.activeElement.tagName === "INPUT") return;
-  if (document.activeElement.tagName === "TEXTAREA") return;
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.ctrlKey) return;
+    if (document.activeElement.tagName === "INPUT") return;
+    if (document.activeElement.tagName === "TEXTAREA") return;
 
-  const isInsertMode = insertModeBox.style.display == 'block';
-  if (isInsertMode) {
-    if (event.key === "Escape") insertModeBox.style.display = 'none';
-    return;
-  }
+    const isInsertMode = insertModeBox.style.display == "block";
+    if (isInsertMode) {
+      if (event.key === "Escape") insertModeBox.style.display = "none";
+      return;
+    }
 
-  if (isLabelActive) return;
+    if (isLabelActive) return;
 
-  event.preventDefault();
-  event.stopImmediatePropagation();
+    event.preventDefault();
+    event.stopImmediatePropagation();
 
-  const scrollSpeed = 50;
-  keySequence = keySequence.slice(-1) + event.key;
+    const scrollSpeed = 50;
+    keySequence = keySequence.slice(-1) + event.key;
 
-  switch (event.key) {
-    // --------------------------------------------------------------
-    // タブ操作
-    // --------------------------------------------------------------
-    case "J":
-      chrome.runtime.sendMessage({ action: "moveTab", direction: "next" });
-      break;
-    case "K":
-      chrome.runtime.sendMessage({ action: "moveTab", direction: "prev" });
-      break;
-    // --------------------------------------------------------------
-    // 画面遷移
-    // --------------------------------------------------------------
-    case "H":
-      history.back();
-      break;
-    case "L":
-      history.forward();
-      break;
-    case "f":
-    case "F":
-      createLinkLabels(event.shiftKey);
-      break;
-    // --------------------------------------------------------------
-    // スクロール
-    // --------------------------------------------------------------
-    case "h":
-      window.scrollBy({ left: -scrollSpeed, behavior: "smooth" });
-      break;
-    case "j":
-      window.scrollBy({ top: scrollSpeed, behavior: "smooth" });
-      break;
-    case "k":
-      window.scrollBy({ top: -scrollSpeed, behavior: "smooth" });
-      break;
-    case "l":
-      window.scrollBy({ left: scrollSpeed, behavior: "smooth" });
-      break;
-    case "d":
-      window.scrollBy({ top: window.innerHeight / 2, behavior: "smooth" });
-      break;
-    case "u":
-      window.scrollBy({ top: -window.innerHeight / 2, behavior: "smooth" });
-      break;
-    case "G":
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
-      break;
-    case "g":
-      if (keySequence === "gg") window.scrollTo({ top: 0, behavior: "smooth" });
-      break;
-    // --------------------------------------------------------------
-    // インサートモード
-    // --------------------------------------------------------------
-    case "i":
-      insertModeBox.style.display = 'block';
-      break;
-  }
-}, true);
+    switch (event.key) {
+      // --------------------------------------------------------------
+      // タブ操作
+      // --------------------------------------------------------------
+      case "J":
+        chrome.runtime.sendMessage({ action: "moveTab", direction: "next" });
+        break;
+      case "K":
+        chrome.runtime.sendMessage({ action: "moveTab", direction: "prev" });
+        break;
+      // --------------------------------------------------------------
+      // 画面遷移
+      // --------------------------------------------------------------
+      case "H":
+        history.back();
+        break;
+      case "L":
+        history.forward();
+        break;
+      case "f":
+      case "F":
+        createLinkLabels(event.shiftKey);
+        break;
+      // --------------------------------------------------------------
+      // スクロール
+      // --------------------------------------------------------------
+      case "h":
+        window.scrollBy({ left: -scrollSpeed, behavior: "smooth" });
+        break;
+      case "j":
+        window.scrollBy({ top: scrollSpeed, behavior: "smooth" });
+        break;
+      case "k":
+        window.scrollBy({ top: -scrollSpeed, behavior: "smooth" });
+        break;
+      case "l":
+        window.scrollBy({ left: scrollSpeed, behavior: "smooth" });
+        break;
+      case "d":
+        window.scrollBy({ top: window.innerHeight / 2, behavior: "smooth" });
+        break;
+      case "u":
+        window.scrollBy({ top: -window.innerHeight / 2, behavior: "smooth" });
+        break;
+      case "G":
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "smooth",
+        });
+        break;
+      case "g":
+        if (keySequence === "gg")
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        break;
+      // --------------------------------------------------------------
+      // インサートモード
+      // --------------------------------------------------------------
+      case "i":
+        insertModeBox.style.display = "block";
+        break;
+    }
+  },
+  true,
+);
 
 //-------------------------------------------------------------------
 // スタイル
