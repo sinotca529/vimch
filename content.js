@@ -19,23 +19,27 @@ function generateLabelCombinations(chars) {
 
 // 現在の画面内に表示されているリンクと入力欄を取得
 function getVisibleElements() {
-  const links = Array.from(document.querySelectorAll("a"));
-  const inputs = Array.from(document.querySelectorAll("input, textarea"));
-
-  return [...links, ...inputs].filter((element) => {
+  const clickable = Array.from(
+    document.querySelectorAll("a, input, textarea, summary"),
+  );
+  return clickable.filter((element) => {
     const rect = element.getBoundingClientRect();
     return (
-      element.checkVisibility() &&
+      element.checkVisibility({
+        opacityProperty: true,
+        visibilityProperty: true,
+        contentVisibilityAuto: true,
+      }) &&
       rect.top >= 0 &&
       rect.left >= 0 &&
-      rect.bottom <= document.documentElement.clientHeight &&
-      rect.right <= document.documentElement.clientWidth
+      rect.bottom <= window.innerHeight &&
+      rect.right <= window.innerWidth
     );
   });
 }
 
 // ラベルを作成してリンクと入力欄に表示
-function createLinkLabels() {
+function createLinkLabels(useNewTab) {
   isLabelActive = true;
   const labelFrag = document.createDocumentFragment();
   const labels = getVisibleElements().map((element, index) => {
@@ -58,11 +62,13 @@ function createLinkLabels() {
     currentInput += event.key;
     const match = labels.find(({ labelText }) => labelText === currentInput);
     if (match) {
-      if (match.element.tagName === "A") {
-        window.location.href = match.element.href;
-      } else {
-        match.element.focus();
-      }
+      match.element.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: useNewTab,
+        }),
+      );
       resetLinkLabels();
     } else if (
       !labels.some(({ labelText }) => labelText.startsWith(currentInput))
@@ -118,7 +124,8 @@ document.addEventListener("keydown", (event) => {
       history.forward();
       break;
     case "f":
-      createLinkLabels();
+    case "F":
+      createLinkLabels(event.shiftKey);
       break;
     // --------------------------------------------------------------
     // スクロール
@@ -182,7 +189,7 @@ style.textContent = `
     background-color: yellow;
     color: black;
     padding: 2px;
-    z-index: 1000;
+    z-index: 2147483647;
   }
 `;
 document.head.appendChild(style);
