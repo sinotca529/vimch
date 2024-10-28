@@ -114,6 +114,46 @@ function createLinkLabels(useNewTab) {
 }
 
 //-------------------------------------------------------------------
+// スクロール
+//-------------------------------------------------------------------
+
+const SmoothScroll = {};
+// スクロール方向 (空のときは停止)
+SmoothScroll._dir = "";
+
+SmoothScroll._inner = function (startPos, startTime, dir) {
+  if (dir != SmoothScroll._dir) return;
+
+  const speed = 0.8;
+  const elapsedTime = performance.now() - startTime;
+  const sign = ["up", "left"].includes(SmoothScroll._dir) ? -1 : 1;
+  const amount = startPos + sign * elapsedTime * speed;
+  const field = ["up", "down"].includes(SmoothScroll._dir) ? "top" : "left";
+  window.scrollTo({ [field]: amount });
+
+  requestAnimationFrame(() => SmoothScroll._inner(startPos, startTime, dir));
+};
+
+SmoothScroll.scroll = function (dir, triggerKey) {
+  const dirChanged = dir !== SmoothScroll._dir;
+  SmoothScroll._dir = dir;
+  if (!dirChanged) return;
+
+  const field = ["up", "down"].includes(SmoothScroll._dir)
+    ? "pageYOffset"
+    : "pageXOffset";
+  SmoothScroll._inner(window[field], performance.now(), dir);
+
+  function handleKeyUp(e) {
+    if (e.key === triggerKey) {
+      SmoothScroll._dir = "";
+      document.removeEventListener("keyup", handleKeyUp);
+    }
+  }
+  document.addEventListener("keyup", handleKeyUp);
+};
+
+//-------------------------------------------------------------------
 // インサートモード
 //-------------------------------------------------------------------
 
@@ -187,16 +227,16 @@ document.addEventListener(
       // スクロール
       // --------------------------------------------------------------
       case "h":
-        window.scrollBy({ left: -scrollSpeed, behavior: "smooth" });
+        SmoothScroll.scroll("left", event.key);
         break;
       case "j":
-        window.scrollBy({ top: scrollSpeed, behavior: "smooth" });
+        SmoothScroll.scroll("down", event.key);
         break;
       case "k":
-        window.scrollBy({ top: -scrollSpeed, behavior: "smooth" });
+        SmoothScroll.scroll("up", event.key);
         break;
       case "l":
-        window.scrollBy({ left: scrollSpeed, behavior: "smooth" });
+        SmoothScroll.scroll("right", event.key);
         break;
       case "d":
         window.scrollBy({ top: window.innerHeight / 2, behavior: "smooth" });
