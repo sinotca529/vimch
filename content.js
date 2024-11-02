@@ -117,41 +117,40 @@ function createLinkLabels(useNewTab) {
 // スクロール
 //-------------------------------------------------------------------
 
-const SmoothScroll = {};
-// スクロール方向 (空のときは停止)
-SmoothScroll._dir = "";
-
-SmoothScroll._inner = function (startPos, startTime, dir) {
-  if (dir != SmoothScroll._dir) return;
-
-  const speed = 0.8;
-  const elapsedTime = performance.now() - startTime;
-  const sign = ["up", "left"].includes(SmoothScroll._dir) ? -1 : 1;
-  const amount = startPos + sign * elapsedTime * speed;
-  const field = ["up", "down"].includes(SmoothScroll._dir) ? "top" : "left";
-  window.scrollTo({ [field]: amount });
-
-  requestAnimationFrame(() => SmoothScroll._inner(startPos, startTime, dir));
-};
-
-SmoothScroll.scroll = function (dir, triggerKey) {
-  const dirChanged = dir !== SmoothScroll._dir;
-  SmoothScroll._dir = dir;
-  if (!dirChanged) return;
-
-  const field = ["up", "down"].includes(SmoothScroll._dir)
-    ? "pageYOffset"
-    : "pageXOffset";
-  SmoothScroll._inner(window[field], performance.now(), dir);
-
-  function handleKeyUp(e) {
-    if (e.key === triggerKey) {
-      SmoothScroll._dir = "";
-      document.removeEventListener("keyup", handleKeyUp);
-    }
+class SmoothScroll {
+  constructor() {
+    this._dir = "";
+    this._field = "top";
+    this._verocity = 0.8;
   }
-  document.addEventListener("keyup", handleKeyUp);
-};
+
+  _inner(startPos, startTime, dir) {
+    if (dir != this._dir) return;
+    const elapsedTime = performance.now() - startTime;
+    window.scrollTo({ [this._field]: startPos + this._verocity * elapsedTime });
+    requestAnimationFrame(() => this._inner(startPos, startTime, dir));
+  }
+
+  scroll(dir, triggerKey) {
+    if (dir === this._dir) return;
+
+    this._dir = dir;
+    this._verocity = ["up", "left"].includes(dir) ? -0.8 : 0.8;
+    this._field = ["up", "down"].includes(dir) ? "top" : "left";
+
+    const startPos = window[["up", "down"].includes(dir) ? "pageYOffset" : "pageXOffset"];
+    this._inner(startPos, performance.now(), dir);
+
+    const handleKeyUp = (e) => {
+      if (e.key === triggerKey) {
+        this._dir = "";
+        document.removeEventListener("keyup", handleKeyUp);
+      }
+    };
+    document.addEventListener("keyup", handleKeyUp);
+  }
+}
+const smoothScroll = new SmoothScroll();
 
 //-------------------------------------------------------------------
 // インサートモード
@@ -227,16 +226,16 @@ document.addEventListener(
       // スクロール
       // --------------------------------------------------------------
       case "h":
-        SmoothScroll.scroll("left", event.key);
+        smoothScroll.scroll("left", event.key);
         break;
       case "j":
-        SmoothScroll.scroll("down", event.key);
+        smoothScroll.scroll("down", event.key);
         break;
       case "k":
-        SmoothScroll.scroll("up", event.key);
+        smoothScroll.scroll("up", event.key);
         break;
       case "l":
-        SmoothScroll.scroll("right", event.key);
+        smoothScroll.scroll("right", event.key);
         break;
       case "d":
         window.scrollBy({ top: window.innerHeight / 2, behavior: "smooth" });
