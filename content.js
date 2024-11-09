@@ -122,23 +122,68 @@ class SmoothScroll {
     this._dir = "";
     this._field = "top";
     this._verocity = 0.8;
+    this._target = window;
+  }
+
+  _windowIsScrollable() {
+    const vertScrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const horiScrollable = document.documentElement.scrollWidth - window.innerWidth;
+    return vertScrollable || horiScrollable;
+  }
+
+  _getScrollTarget() {
+    if (this._windowIsScrollable()) return window;
+
+    // windowが スクロール不可能な場合にのみ、他の要素を探索
+    // スクロール可能な最も大きい要素を探索
+    let target = window;
+    let largestArea = 0;
+    document.querySelectorAll('div').forEach(element => {
+      const rect = element.getBoundingClientRect();
+      const visible =  (
+        element.checkVisibility({
+          opacityProperty: true,
+          visibilityProperty: true,
+          contentVisibilityAuto: true,
+        }) &&
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= window.innerHeight &&
+        rect.right <= window.innerWidth
+      );
+      if (!visible) return;
+
+      if (!["scroll", "auto"].includes(window.getComputedStyle(element).overflowY)) return;
+      const visibleArea = rect.width * rect.height;
+      if (visibleArea > largestArea) {
+        largestArea = visibleArea;
+        target = element;
+      }
+    });
+
+    return target;
   }
 
   _inner(startPos, startTime, dir) {
     if (dir != this._dir) return;
     const elapsedTime = performance.now() - startTime;
-    window.scrollTo({ [this._field]: startPos + this._verocity * elapsedTime });
+    this._target.scrollTo({ [this._field]: startPos + this._verocity * elapsedTime });
     requestAnimationFrame(() => this._inner(startPos, startTime, dir));
   }
 
   scroll(dir, triggerKey) {
     if (dir === this._dir) return;
 
+    this._target = this._getScrollTarget();
+
     this._dir = dir;
     this._verocity = ["up", "left"].includes(dir) ? -0.8 : 0.8;
     this._field = ["up", "down"].includes(dir) ? "top" : "left";
 
-    const startPos = window[["up", "down"].includes(dir) ? "pageYOffset" : "pageXOffset"];
+    const startPos = this._target === window
+      ? (this._field === 'top' ? window.pageYOffset : window.pageXOffset)
+      : (this._field === 'top' ? this._target.scrollTop : this._target.scrollLeft);
+
     this._inner(startPos, performance.now(), dir);
 
     const handleKeyUp = (e) => {
