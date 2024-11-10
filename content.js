@@ -378,6 +378,9 @@ document.addEventListener(
       case "K":
         chrome.runtime.sendMessage({ action: "moveTab", direction: "prev" });
         break;
+      case "x":
+        chrome.runtime.sendMessage({ action: "closeTab" });
+        break;
       // --------------------------------------------------------------
       // 画面遷移
       // --------------------------------------------------------------
