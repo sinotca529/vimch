@@ -17,6 +17,24 @@ class Util {
       rect.right <= window.innerWidth
     );
   }
+
+  static focusInput(elem) {
+    if (elem.tagName === "INPUT" || elem.tagName === "TEXTAREA") {
+      elem.focus();
+      // カーソルを末尾に移動
+      const length = elem.value.length;
+      elem.setSelectionRange(length, length);
+    } else if (elem.contentEditable === "true") {
+      elem.focus();
+      // カーソルを末尾に移動
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(elem);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
 }
 
 class LinkHop {
@@ -70,20 +88,11 @@ class LinkHop {
   }
 
   _clickElement = (elem) => {
-    if (elem.tagName === "INPUT" || elem.tagName === "TEXTAREA") {
-      elem.focus();
-      // カーソルを末尾に移動
-      const length = elem.value.length;
-      elem.setSelectionRange(length, length);
-    } else if (elem.contentEditable === "true") {
-      elem.focus();
-      // カーソルを末尾に移動
-      const range = document.createRange();
-      const selection = window.getSelection();
-      range.selectNodeContents(elem);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
+    if (
+      ["INPUT", "TEXTAREA"].includes(elem.tagName) ||
+      elem.contentEditable === "true"
+    ) {
+      Util.focusInput(elem);
     } else {
       elem.dispatchEvent(
         new MouseEvent("click", {
@@ -125,6 +134,7 @@ class LinkHop {
     if (this.isActive()) return;
     document.body.appendChild(this._makeLabels());
     this._currentInput = "";
+    this._useNewTab = useNewTab;
     document.addEventListener("keydown", this._handleKeyInput);
   }
 
@@ -143,16 +153,14 @@ class SmoothScroll {
     this._target = window;
   }
 
-  _windowIsScrollable() {
-    const vertScrollable =
-      document.documentElement.scrollHeight - window.innerHeight;
-    const horiScrollable =
-      document.documentElement.scrollWidth - window.innerWidth;
-    return vertScrollable || horiScrollable;
+  static _windowIsScrollable() {
+    const vert = document.documentElement.scrollHeight - window.innerHeight;
+    const hori = document.documentElement.scrollWidth - window.innerWidth;
+    return vert || hor;
   }
 
-  _getScrollTarget() {
-    if (this._windowIsScrollable()) return window;
+  static _getScrollTarget() {
+    if (SmoothScroll._windowIsScrollable()) return window;
 
     // windowが スクロール不可能な場合にのみ、他の要素を探索
     // スクロール可能な最も大きい要素を探索
@@ -165,9 +173,9 @@ class SmoothScroll {
       if (!["scroll", "auto"].includes(ofy)) return;
 
       const rect = elem.getBoundingClientRect();
-      const visibleArea = rect.width * rect.height;
-      if (visibleArea > largestArea) {
-        largestArea = visibleArea;
+      const area = rect.width * rect.height;
+      if (area > largestArea) {
+        largestArea = area;
         target = elem;
       }
     });
@@ -178,17 +186,15 @@ class SmoothScroll {
   _inner(startPos, startTime, dir) {
     if (dir != this._dir) return;
     const elapsedTime = performance.now() - startTime;
-    this._target.scrollTo({
-      [this._field]: startPos + this._verocity * elapsedTime,
-    });
+    const pos = startPos + this._verocity * elapsedTime;
+    this._target.scrollTo({ [this._field]: pos });
     requestAnimationFrame(() => this._inner(startPos, startTime, dir));
   }
 
   scroll(dir, triggerKey) {
     if (dir === this._dir) return;
 
-    this._target = this._getScrollTarget();
-
+    this._target = SmoothScroll._getScrollTarget();
     this._dir = dir;
     this._verocity = ["up", "left"].includes(dir) ? -0.8 : 0.8;
     this._field = ["up", "down"].includes(dir) ? "top" : "left";
@@ -213,6 +219,71 @@ class SmoothScroll {
     document.addEventListener("keyup", handleKeyUp);
   }
 }
+
+class Search {
+  constructor() {
+    this._query = "";
+
+    const fi = this._makeFindBox();
+    this._findBox = fi.findBox;
+    this._input = fi.input;
+
+    document.body.appendChild(this._findBox);
+  }
+
+  _makeFindBox = () => {
+    const findBox = document.createElement("div");
+    findBox.className = "vimch-insert";
+    findBox.style.display = "none";
+
+    const input = document.createElement("input");
+    input.id = "vimch-search";
+    input.type = "text";
+    input.style.width = "200px";
+    input.style.fontSize = "14px";
+    findBox.appendChild(input);
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault(); // Enterキーを無効化
+        this._query = document.getElementById("vimch-search").value;
+        input.blur();
+        this.next();
+      }
+    });
+
+    return { findBox, input };
+  };
+
+  // find(aString, aCaseSensitive, aBackwards, aWrapAround, aWholeWord, aSearchInFrames, aShowDialog)
+  next = () => {
+    if (this._query.length === 0) return;
+    this._showFindBox();
+    this._input.value = "";
+    window.find(this._query, false, false, true, false, true, false);
+    this._input.value = this._query;
+  };
+  prev = () => {
+    if (this._query.length === 0) return;
+    this._showFindBox();
+    this._input.value = "";
+    window.find(this._query, false, true, true, false, true, false);
+    this._input.value = this._query;
+  };
+
+  _showFindBox = () => (this._findBox.style.display = "block");
+  hideFindBox = () => (this._findBox.style.display = "none");
+
+  focusFindBox = () => {
+    this._showFindBox();
+    Util.focusInput(this._input);
+  };
+
+  isActive = () => {
+    return this._findBox.style.display === "block";
+  };
+}
+const search = new Search();
 
 //-------------------------------------------------------------------
 // スタイル
@@ -267,15 +338,16 @@ document.addEventListener(
   "keydown",
   (event) => {
     if (event.ctrlKey) return;
+    if (linkHop.isActive()) return;
 
     const activeElem = document.activeElement;
     if (
-      activeElem.tagName === "INPUT" ||
-      activeElem.tagName === "TEXTAREA" ||
+      ["INPUT", "TEXTAREA"].includes(activeElem.tagName) ||
       activeElem.contentEditable === "true"
     ) {
       if (event.key === "Escape") {
         activeElem.blur();
+        search.hideFindBox();
         event.preventDefault();
         event.stopImmediatePropagation();
       }
@@ -288,7 +360,7 @@ document.addEventListener(
       return;
     }
 
-    if (linkHop.isActive()) return;
+    if (event.key === "Escape") search.hideFindBox();
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -349,6 +421,18 @@ document.addEventListener(
       case "g":
         if (keySequence === "gg")
           window.scrollTo({ top: 0, behavior: "smooth" });
+        break;
+      // --------------------------------------------------------------
+      // 検索
+      // --------------------------------------------------------------
+      case "/":
+        search.focusFindBox();
+        break;
+      case "n":
+        search.next();
+        break;
+      case "N":
+        search.prev();
         break;
       // --------------------------------------------------------------
       // インサートモード
