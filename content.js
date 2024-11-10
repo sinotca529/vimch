@@ -1,5 +1,5 @@
 //-------------------------------------------------------------------
-// Util
+// クラス定義
 //-------------------------------------------------------------------
 
 class Util {
@@ -19,111 +19,121 @@ class Util {
   }
 }
 
-//-------------------------------------------------------------------
-// リンク
-//-------------------------------------------------------------------
-
-// ラベルの組み合わせを生成
-function generateLabelCombinations() {
-  const chars = "abcdeghijklmnopqrstuvwxyz";
-  const combinations = [];
-  for (let i = 0; i < chars.length; i++) {
-    for (let j = 0; j < chars.length; j++) {
-      combinations.push(chars[i] + chars[j]);
-    }
+class LinkHop {
+  constructor() {
+    this._keyBinds = LinkHop._makeKeyBinds();
+    this._useNewTab = false;
+    this._currentInput = "";
+    this._labels = [];
   }
-  return combinations;
-}
 
-// 現在表示されているクリックできそうな要素を取得
-function getVisibleElements() {
-  const clickable = Array.from(
-    document.querySelectorAll(
-      "a, input, textarea, summary, button, [role='button'], [contenteditable=true]",
-    ),
-  );
-  return clickable.filter((e) => Util.visible(e));
-}
+  static _makeKeyBinds() {
+    const chars = "abcdeghijklmnopqrstuvwxyz";
+    const combinations = [];
+    for (let i = 0; i < chars.length; i++) {
+      for (let j = 0; j < chars.length; j++) {
+        combinations.push(chars[i] + chars[j]);
+      }
+    }
+    return combinations;
+  }
 
-// ラベルを作成してリンクと入力欄に表示
-const labelCombinations = generateLabelCombinations();
-let isLabelActive = false;
-function createLinkLabels(useNewTab) {
-  isLabelActive = true;
-  const labelFrag = document.createDocumentFragment();
-  const labels = getVisibleElements()
-    .slice(0, labelCombinations.length)
-    .map((element, index) => {
-      const keyBind = labelCombinations[index];
-      const rect = element.getBoundingClientRect();
-      const label = document.createElement("div");
-      label.textContent = keyBind.toUpperCase();
-      label.className = "vimch-label";
-      label.style.left = `${window.scrollX + rect.left}px`;
-      label.style.top = `${window.scrollY + rect.top}px`;
-      labelFrag.appendChild(label);
-      return { element, label, keyBind };
-    });
-  document.body.appendChild(labelFrag);
+  static _getVisibleClickableElements() {
+    const clickable = Array.from(
+      document.querySelectorAll(
+        "a, input, textarea, summary, button, [role='button'], [contenteditable=true]",
+      ),
+    );
+    return clickable.filter((e) => Util.visible(e));
+  }
 
-  let currentInput = "";
-  function handleKeyInput(event) {
+  isActive() {
+    return this._labels.length != 0;
+  }
+
+  _makeLabels() {
+    const labelFrag = document.createDocumentFragment();
+    this._labels = LinkHop._getVisibleClickableElements()
+      .slice(0, this._keyBinds.length)
+      .map((element, index) => {
+        const keyBind = this._keyBinds[index];
+        const rect = element.getBoundingClientRect();
+        const label = document.createElement("div");
+        label.textContent = keyBind.toUpperCase();
+        label.className = "vimch-label";
+        label.style.left = `${window.scrollX + rect.left}px`;
+        label.style.top = `${window.scrollY + rect.top}px`;
+        labelFrag.appendChild(label);
+        return { element, label, keyBind };
+      });
+    return labelFrag;
+  }
+
+  _clickElement = (elem) => {
+    if (elem.tagName === "INPUT" || elem.tagName === "TEXTAREA") {
+      elem.focus();
+      // カーソルを末尾に移動
+      const length = elem.value.length;
+      elem.setSelectionRange(length, length);
+    } else if (elem.contentEditable === "true") {
+      elem.focus();
+      // カーソルを末尾に移動
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(elem);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      elem.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: this._useNewTab,
+        }),
+      );
+    }
+  };
+
+  _handleKeyInput = (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
 
     if (event.key === "Escape") {
-      resetLinkLabels();
+      this._deactivateLinkLabels();
       return;
     }
 
-    currentInput += event.key;
-    const found = labels.find(({ keyBind }) => keyBind === currentInput);
+    this._currentInput += event.key;
+    const found = this._labels.find(
+      ({ keyBind }) => keyBind === this._currentInput,
+    );
 
     if (found) {
-      const elem = found.element;
-      if (elem.tagName === "INPUT" || elem.tagName === "TEXTAREA") {
-        elem.focus();
-        // カーソルを末尾に移動
-        const length = elem.value.length;
-        elem.setSelectionRange(length, length);
-      } else if (elem.contentEditable === "true") {
-        elem.focus();
-        // カーソルを末尾に移動
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNodeContents(elem);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      } else {
-        elem.dispatchEvent(
-          new MouseEvent("click", {
-            bubbles: true,
-            cancelable: true,
-            ctrlKey: useNewTab,
-          }),
-        );
-      }
-      resetLinkLabels();
+      this._clickElement(found.element);
+      this._deactivateLinkLabels();
     } else if (
-      !labels.some(({ keyBind }) => keyBind.startsWith(currentInput))
+      !this._labels.some(({ keyBind }) =>
+        keyBind.startsWith(this._currentInput),
+      )
     ) {
-      resetLinkLabels();
+      this._deactivateLinkLabels();
     }
+  };
+
+  activateLinkLabels(useNewTab) {
+    if (this.isActive()) return;
+    document.body.appendChild(this._makeLabels());
+    this._currentInput = "";
+    document.addEventListener("keydown", this._handleKeyInput);
   }
 
-  document.addEventListener("keydown", handleKeyInput);
-
-  function resetLinkLabels() {
-    labels.forEach(({ label }) => label.remove());
-    document.removeEventListener("keydown", handleKeyInput);
-    isLabelActive = false;
-  }
+  _deactivateLinkLabels = () => {
+    this._labels.forEach(({ label }) => label.remove());
+    this._labels = [];
+    document.removeEventListener("keydown", this._handleKeyInput);
+  };
 }
-
-//-------------------------------------------------------------------
-// スクロール
-//-------------------------------------------------------------------
 
 class SmoothScroll {
   constructor() {
@@ -203,21 +213,55 @@ class SmoothScroll {
     document.addEventListener("keyup", handleKeyUp);
   }
 }
+
+//-------------------------------------------------------------------
+// スタイル
+//-------------------------------------------------------------------
+
+const style = document.createElement("style");
+style.textContent = `
+  .vimch-label {
+    font-family: "Source Code Pro", Consolas, "Ubuntu Mono", Menlo, "DejaVu Sans Mono", monospace, monospace;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 3px;
+    position: absolute;
+    background-color: yellow;
+    color: black;
+    padding: 2px;
+    z-index: 2147483647;
+  }
+  .vimch-insert {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 8px 16px;
+    background-color: white;
+    color: black;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    display: none;
+  }
+`;
+
+//-------------------------------------------------------------------
+// 処理
+//-------------------------------------------------------------------
+
+const linkHop = new LinkHop();
 const smoothScroll = new SmoothScroll();
 
-//-------------------------------------------------------------------
-// インサートモード
-//-------------------------------------------------------------------
+// スタイルの登録
+document.head.appendChild(style);
 
+// インサートモード用の要素登録
 const insertModeBox = document.createElement("div");
 insertModeBox.textContent = "Insert Mode";
 insertModeBox.className = "vimch-insert";
 document.body.appendChild(insertModeBox);
 
-//-------------------------------------------------------------------
 // キーバインディング
-//-------------------------------------------------------------------
-
 let keySequence = "";
 document.addEventListener(
   "keydown",
@@ -244,7 +288,7 @@ document.addEventListener(
       return;
     }
 
-    if (isLabelActive) return;
+    if (linkHop.isActive()) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -273,7 +317,7 @@ document.addEventListener(
         break;
       case "f":
       case "F":
-        createLinkLabels(event.shiftKey);
+        linkHop.activateLinkLabels(event.shiftKey);
         break;
       // --------------------------------------------------------------
       // スクロール
@@ -316,35 +360,3 @@ document.addEventListener(
   },
   true,
 );
-
-//-------------------------------------------------------------------
-// スタイル
-//-------------------------------------------------------------------
-
-const style = document.createElement("style");
-style.textContent = `
-  .vimch-label {
-    font-family: "Source Code Pro", Consolas, "Ubuntu Mono", Menlo, "DejaVu Sans Mono", monospace, monospace;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 3px;
-    position: absolute;
-    background-color: yellow;
-    color: black;
-    padding: 2px;
-    z-index: 2147483647;
-  }
-  .vimch-insert {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    padding: 8px 16px;
-    background-color: white;
-    color: black;
-    border-radius: 4px;
-    font-family: Arial, sans-serif;
-    font-size: 16px;
-    display: none;
-  }
-`;
-document.head.appendChild(style);
