@@ -156,7 +156,7 @@ class SmoothScroll {
   static _windowIsScrollable() {
     const vert = document.documentElement.scrollHeight - window.innerHeight;
     const hori = document.documentElement.scrollWidth - window.innerWidth;
-    return vert || hor;
+    return vert || hori;
   }
 
   static _getScrollTarget() {
